@@ -1,0 +1,344 @@
+{
+  "name": "AI Teacher Phase3 - 교안 생성",
+  "nodes": [
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {}
+      },
+      "id": "d481ce24-20a8-4135-826a-a6734bf4f73b",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        48,
+        864
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "FHruXiW3PJfYtsIQ",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## RAG AI Agent with Chat Interface",
+        "height": 465,
+        "width": 2604
+      },
+      "id": "7f0b2422-fcd4-4ce5-8b45-d047b84b6c41",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1408,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "id": "89eb6e09-8948-41a9-a15f-fcc8c85a5df6",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        464,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "aitutor-doc",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "75f74805-44d5-463f-b247-46754c6c4465",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1344,
+        640
+      ],
+      "webhookId": "22c86e3e-3b64-4fd8-8d97-a92d3235a857"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=당신은 한국 고등학교 수학 수업 교안 작성 전문가입니다.\n\n## 이전 교안 기록\n{{ $json.prevPlans }}\n\n이전 교안을 참고하여:\n- 이전 수업과 자연스럽게 이어지는 흐름을 구성하라\n- 이전 수업에서 다룬 내용을 복습 질문으로 활용하라\n- 동일 예제/활동 중복을 피하라\n\n아래 정보를 기반으로 수업 교안을 작성하세요.\n\n## 수업 조건\n- 단원: {{ $json.topic }}\n- 수업 시간: {{ $json.duration }}분\n- 대상: 고등학교 1학년\n- 학생 수: {{ $json.student_count }}명\n\n## 반 전체 학생 학습 프로필 (Mem0)\n{{ $json.mem0_all }}\n\n## 문제은행 레퍼런스\n{{ $json.problems }}\n\n## 교안 작성 규칙\n1) 반 전체 학생의 약점을 분석하여 공통 약점을 파악하라\n2) 공통 약점에 대한 보강 설명을 반드시 포함하라\n3) 수준별(상/중/하) 활동을 분리하여 모든 학생이 참여할 수 있게 하라\n4) 문제은행에서 수업 중 활용할 예제와 연습문제를 선택하라\n5) 시간 배분을 명확히 하라\n\n## 출력 형식\n### 반 약점 분석\n- 공통 약점 (N명 이상 해당)\n- 개별 주의 학생\n\n### 수업 개요\n- 단원명, 학습 목표, 준비물\n\n### 도입 (약 5분)\n- 전시 학습 복습 질문\n- 동기유발\n\n### 전개 (약 30분)\n- 핵심 개념 설명 (판서 내용 포함)\n- 예제 풀이 (문제은행에서 선택)\n- 공통 약점 보강 포인트\n\n### 활동 (약 10분)\n- 상위권 문제 (1문제)\n- 중위권 문제 (1문제)\n- 하위/기초권 문제 (1문제)\n\n### 정리 (약 5분)\n- 핵심 요약\n- 과제 안내 (수준별 차등)\n- 다음 수업 예고",
+        "options": {}
+      },
+      "id": "3fc8b5a7-2a0a-4d19-ac7f-dab414282006",
+      "name": "RAG AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [
+        128,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "model": "text-embedding-ada-002",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -960,
+        848
+      ],
+      "id": "a594c00d-da7e-404b-843f-6685d67f17fe",
+      "name": "Embeddings OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "FHruXiW3PJfYtsIQ",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "load",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": "list",
+          "cachedResultName": "documents"
+        },
+        "prompt": "={{ $('Webhook').item.json.body.topic }}",
+        "options": {
+          "queryName": "match_documents"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        -880,
+        640
+      ],
+      "id": "267d6e97-d27f-41b9-b3a7-0f5900630ede",
+      "name": "Vector Search",
+      "credentials": {
+        "supabaseApi": {
+          "id": "IRXs1bJdW31d4V7Q",
+          "name": "AITUTOR Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const webhook = $('Webhook').first().json.body;\nconst studentIds = webhook.student_ids || [];\n\nreturn studentIds.map(id => ({\n  json: { student_id: id }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -496,
+        640
+      ],
+      "id": "4a933ae5-97b9-439f-a973-e7b2360467fa",
+      "name": "Split IDs"
+    },
+    {
+      "parameters": {
+        "url": "=http://193.168.195.222:8888/memories?user_id={{ $json.student_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -288,
+        640
+      ],
+      "id": "ef5efaea-451e-4e9a-ae5b-be06f0fbff9e",
+      "name": "Mem0 Search"
+    },
+    {
+      "parameters": {
+        "jsCode": "const mem0Results = $('Mem0 Search').all().map(item => JSON.stringify(item.json));\nconst problems = $('Vector Search').all().map(item => JSON.stringify(item.json));\nconst webhook = $('Webhook').first().json.body;\nconst prevPlans = $('get data').all().map(item => JSON.stringify(item.json));\n\nreturn [{\n  json: {\n    mem0_all: mem0Results.join('\\n---\\n'),\n    problems: problems.join('\\n'),\n    topic: webhook.topic || '이차방정식',\n    duration: webhook.duration || 50,\n    student_count: (webhook.student_ids || []).length,\n    prevPlans: prevPlans.join('\\n---\\n')\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        640
+      ],
+      "id": "6a7122ca-36d8-4e9b-abed-ed42462cab5b",
+      "name": "Merge All"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO teacher_lesson_plans (teacher_id, topic, duration, plan_content)\nVALUES (\n  '{{ $('Webhook').first().json.body.teacher_id }}',\n  '{{ $('Webhook').first().json.body.topic }}',\n  {{ $('Webhook').first().json.body.duration }},\n  '{{ $('RAG AI Agent').first().json.output.replaceAll(\"'\", \"''\") }}'\n)",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        688,
+        640
+      ],
+      "id": "805dfc99-d27e-4e82-8e93-13e3cc339283",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "uN9QWmdYp4HSiR7V",
+          "name": "AITUTOR Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT topic, plan_content, created_at FROM teacher_lesson_plans \nWHERE teacher_id = '{{ $('Webhook').first().json.body.teacher_id }}'\nORDER BY created_at DESC LIMIT 3",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1152,
+        640
+      ],
+      "id": "9588b7fb-f9d0-4d5c-8200-d98cb411a879",
+      "name": "get data",
+      "executeOnce": false,
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "uN9QWmdYp4HSiR7V",
+          "name": "AITUTOR Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "RAG AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "get data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RAG AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Vector Search",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vector Search": {
+      "main": [
+        [
+          {
+            "node": "Split IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split IDs": {
+      "main": [
+        [
+          {
+            "node": "Mem0 Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mem0 Search": {
+      "main": [
+        [
+          {
+            "node": "Merge All",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge All": {
+      "main": [
+        [
+          {
+            "node": "RAG AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get data": {
+      "main": [
+        [
+          {
+            "node": "Vector Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "e7c0eb4c-c451-492b-b5b1-aacb7179df2a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f25b64f8e08bc6b0af3e5071d97899510fcb40c11931589423f85ff4c37333c1"
+  },
+  "id": "LVoeD7dXy3disAa8",
+  "tags": []
+}

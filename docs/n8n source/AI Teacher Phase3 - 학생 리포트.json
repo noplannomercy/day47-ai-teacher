@@ -1,0 +1,312 @@
+{
+  "name": "AI Teacher Phase3 - 학생 리포트",
+  "nodes": [
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "options": {}
+      },
+      "id": "1bef7bce-0adc-41e0-b92e-c315533d3dc5",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        -320,
+        864
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "FHruXiW3PJfYtsIQ",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## RAG AI Agent with Chat Interface",
+        "height": 465,
+        "width": 2764
+      },
+      "id": "249ea930-ad83-48a8-8edc-fae36aa5b6d7",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1568,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "id": "19e82b5b-f9e5-4d97-9b99-1d48f575d055",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        144,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "aitutor-report",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "4e7bd083-7a50-4d95-9921-b2931d30282f",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1520,
+        640
+      ],
+      "webhookId": "6350e749-78cb-4a00-890d-cfa59faafac8"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=당신은 한국 고등학교 수학 교사를 지원하는 AI 보조교사입니다.\n아래 데이터를 분석하여 학생 리포트를 작성하세요.\n\n## 이전 리포트 기록\n{{ $json.prevReports }}\n\n이전 리포트를 참고하여:\n- 이전 약점이 개선되었는지 확인하라\n- 이전 권고사항의 이행 여부를 반영하라\n- 성장 추세를 구체적으로 비교하라 (예: \"지난 리포트 대비 부호 실수 감소\")\n- 동일 내용 반복을 피하라\n\n## 학생 기본 정보\n{{ $json.profile }}\n\n## AI가 기억하고 있는 학습 프로필 (Mem0)\n{{ $json.mem0 }}\n\n## 최근 대화 이력\n{{ $json.chatHistory }}\n\n## 리포트 형식 (반드시 준수)\n1) 학생 개요: 이름, 수준, 성적대\n2) 강점 (잘하는 영역, 구체적으로)\n3) 약점 (반복 실수 패턴, 구체적으로)\n4) 최근 학습 활동 요약 (대화 이력 기반)\n5) 성장 추세 (개선된 점 / 여전한 문제)\n6) 권고사항 (다음에 집중할 영역, 추천 학습 방법)\n7) 학부모 상담용 한줄 코멘트",
+        "options": {}
+      },
+      "id": "e11bc309-8c18-48f4-87b6-98aca1b5e479",
+      "name": "RAG AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [
+        -240,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=http://193.168.195.222:8888/memories?user_id={{ $('Webhook').item.json.body.student_id }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1136,
+        640
+      ],
+      "id": "f4721f50-cb2f-433f-b675-1c20088d3a2e",
+      "name": "Mem0 Search"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM n8n_chat_histories \nWHERE session_id = '{{ $('Webhook').item.json.body.student_id }}'\nORDER BY id DESC \nLIMIT 20",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -928,
+        640
+      ],
+      "id": "817378e5-b8ea-47a1-94d4-9fb747de07d9",
+      "name": "Chat History",
+      "credentials": {
+        "postgres": {
+          "id": "uN9QWmdYp4HSiR7V",
+          "name": "AITUTOR Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM student_profiles \nWHERE user_id = '{{ $('Webhook').item.json.body.student_id }}'",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -736,
+        640
+      ],
+      "id": "45f5ef25-cc49-492d-9013-77bf8598bbd0",
+      "name": "Student Profile",
+      "credentials": {
+        "postgres": {
+          "id": "uN9QWmdYp4HSiR7V",
+          "name": "AITUTOR Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const profile = $('Student Profile').first().json;\nconst mem0 = $('Mem0 Search').first().json;\nconst chatHistory = $('Chat History').all().map(item => JSON.stringify(item.json));\nconst prevReports = $('get data').all().map(item => JSON.stringify(item.json));\n\nreturn [{\n  json: {\n    profile: JSON.stringify(profile),\n    mem0: JSON.stringify(mem0),\n    chatHistory: chatHistory.join('\\n'),\n    prevReports: prevReports.join('\\n---\\n')\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        640
+      ],
+      "id": "a59805e2-c394-4617-83a5-7d9cdcbe7e6a",
+      "name": "Merge Data"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO teacher_reports (teacher_id, student_id, report_content)\nVALUES (\n  '{{ $('Webhook').first().json.body.teacher_id }}',\n  '{{ $('Webhook').first().json.body.student_id }}',\n  '{{ $('RAG AI Agent').first().json.output.replaceAll(\"'\", \"''\") }}'\n)",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        352,
+        640
+      ],
+      "id": "e240020f-4705-4868-8f6a-0a463d1ae0e4",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "uN9QWmdYp4HSiR7V",
+          "name": "AITUTOR Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT report_content, created_at FROM teacher_reports \nWHERE student_id = '{{ $('Webhook').item.json.body.student_id }}'\nORDER BY created_at DESC LIMIT 3",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1328,
+        640
+      ],
+      "id": "42a8b606-3990-45e6-8870-b68a61153fac",
+      "name": "get data",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "uN9QWmdYp4HSiR7V",
+          "name": "AITUTOR Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "RAG AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "get data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RAG AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mem0 Search": {
+      "main": [
+        [
+          {
+            "node": "Chat History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat History": {
+      "main": [
+        [
+          {
+            "node": "Student Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Student Profile": {
+      "main": [
+        [
+          {
+            "node": "Merge Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Data": {
+      "main": [
+        [
+          {
+            "node": "RAG AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get data": {
+      "main": [
+        [
+          {
+            "node": "Mem0 Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "6ed27a9d-3528-4e94-b987-5d6608aa16f2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f25b64f8e08bc6b0af3e5071d97899510fcb40c11931589423f85ff4c37333c1"
+  },
+  "id": "pHGg0c1iQLmEynvB",
+  "tags": []
+}
